@@ -1,0 +1,110 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <title>AnimeFM | Tu radio de anime en un solo lugar</title>
+    <meta name="description" content="AnimeFM, Radio Anime.">
+    <meta name="keywords" content="Anime, AnimeFM, Radio Anime, Radio de anime online"/>
+    <link rel="icon" type="image/x-icon" href="favicon/favicon.ico">
+    <link rel="stylesheet" href="css/index.css">
+</head>
+<body>
+    <div class="nav-bar">
+        <a href="https://kpopfm.rf.gd/" target="_blank" class="kpop-link">K-POP</a>
+    </div>
+    <div class="videobg-container">
+        <video class="videobg" preload="true" autoplay loop muted>
+            <source src="https://static.moewalls.com/videos/preview/2024/sung-jinwoo-king-darkness-solo-levelling-preview.mp4" type="video/mp4"> 
+        </video>
+        
+        <div class="container">
+            <section class="container">
+                <div class="logo"></div>
+
+                <!-- Reproductor de Audio HTML5 -->
+                <div class="audio-player">
+                    <div class="audio-logo"></div>
+                    <audio id="audioPlayer" controls autoplay>
+                        <source src="https://listen.moe/stream" type="audio/mp3">
+                        Tu navegador no soporta la reproducción de audio.
+                    </audio>
+                </div>
+
+                <div class="credits">
+                    Pagina creada por YuuenS
+                </div>
+            </section>
+        </div>
+    </div>
+    <script>
+        // Script para conectar al WebSocket y manejar datos en tiempo real
+        let heartbeatInterval;
+        let ws;
+
+        function heartbeat(interval) {
+            heartbeatInterval = setInterval(() => {
+                ws.send(JSON.stringify({ op: 9 }));
+            }, interval);
+        }
+
+        function connect() {
+            ws = new WebSocket('wss://listen.moe/gateway_v2');
+
+            ws.onopen = () => {
+                clearInterval(heartbeatInterval);
+                heartbeatInterval = null;
+            };
+
+            ws.onmessage = message => {
+                if (!message.data.length) return;
+                let response;
+                try {
+                    response = JSON.parse(message.data);
+                } catch (error) {
+                    return;
+                }
+                switch (response.op) {
+                    case 0:
+                        ws.send(JSON.stringify({ op: 9 }));
+                        heartbeat(response.d.heartbeat);
+                        break;
+                    case 1:
+                        if (response.t === 'TRACK_UPDATE' || response.t === 'TRACK_UPDATE_REQUEST' || response.t === 'QUEUE_UPDATE' || response.t === 'NOTIFICATION') {
+                            console.log(response.d); // Aquí puedes manejar los datos recibidos
+                        }
+                        break;
+                    default:
+                        break;
+                }
+            };
+
+            ws.onclose = error => {
+                clearInterval(heartbeatInterval);
+                heartbeatInterval = null;
+                if (ws) {
+                    ws.close();
+                    ws = null;
+                }
+                setTimeout(() => connect(), 5000);
+            };
+        }
+
+        connect();
+
+        const audioPlayer = document.getElementById('audioPlayer');
+        audioPlayer.addEventListener('pause', () => {
+            setTimeout(() => {
+                if (audioPlayer.paused) {
+                    audioPlayer.play();
+                }
+            }, 1000);
+        });
+
+        audioPlayer.addEventListener('error', () => {
+            setTimeout(() => {
+                audioPlayer.load();
+                audioPlayer.play();
+            }, 1000);
+        });
+    </script>
+</body>
+</html>
